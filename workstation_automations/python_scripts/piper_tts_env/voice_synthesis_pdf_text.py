@@ -1,62 +1,126 @@
-import wave
-import json # Still useful if you need to inspect config, but not strictly needed for PiperVoice.load()
+import os
+import wave 
+import json
 from piper import PiperVoice
-from piper import PiperConfig # Still useful for understanding structure, but not needed for load() directly
+from piper import PiperConfig
+from PyPDF2 import PdfReader
 
+
+# file directories listing
 voice_location = "/home/ethenian/piper_voices/british-cori-high/en_GB-cori-high.onnx"
 json_location = "/home/ethenian/piper_voices/british-cori-high/en_GB-cori-high.onnx.json"
+synthesised_dictation_storage = "/home/ethenian/voiced_pdf_text_audiobooks"
 
-# Removed as it's not used in the provided snippet
-# voice_dictation_storage = ""
 
-converted_text = "Saying that applications share a single network connection through multiplexing is not much of an explanation. How does the TCP/IP process determine the source and destination application for the contents of an arriving segment? The answer isthrough sockets. Sockets are the combination of IP address and TCP/UDP port number. Hosts use sockets to identify TCP connections and sort out UDP two client sockets as 192.168.10.79:14972 and 192.168.10.70:14973. So the sockets allow simultaneous file transfer sessions to the same client from the same FTP server. If the client sessions were distinguished only by IP address or port number, the server would have no way of uniquely identifying the client FTP process. And the FTP server’s socket address is accessed by all of the FTP client sat the same time without confusion Now consider the server shown in Figure 13.2. Here there is a server that has more than one TCP/IP interface for network access, and thus more than one IP"
+# check if directories in path_to place_synthesised_audio exists if not make it
+def check_dir_existance_create(path_to_file):
+    directory_path = os.path.dirname(path_to_file)
+    
+    if directory_path:
+        os.makedirs(directory_path, exist_ok=True)
+        print(f"Made new directory {directory_path} exists")
+    else:
+        print(f"Directory {directory_path} already exists and we'll use that")
 
-def voice_synthesis(text):
-    # 1. Load the voice model.
-    # PiperVoice.load() is designed to automatically find and load the
-    # associated .json configuration file if it's in the same directory
-    # and named correctly (e.g., model.onnx and model.onnx.json).
-    # You generally do NOT need to load the JSON separately and pass it via syn_config=config
-    # unless you are overriding specific runtime synthesis parameters dynamically.
+
+# converts pdf to text and has various customs such as starting page, ending page for selective text output
+def pdf_convertion_to_text(file_path):
+    start_page = input('Enter the starting page: ')
+    end_page = input('Enter the ending page: ')
+    current_page = 0
+    accumulated_converted_pdf_text = ""
+    
+    reader = PdfReader('/home/ethenian/'+ file_path)
+    while current_page < int(end_page):
+        if current_page == 0:
+            current_page = int(start_page)
+    
+        page = reader.pages[current_page]
+        accumulated_converted_pdf_text += page.extract_text()
+        current_page += 1
+    
+    print(f"Finished conversion of [ {file_path} ] to text")
+    return accumulated_converted_pdf_text 
+
+
+# Voice synthesis of presented input as text
+def voice_synthesis(text,audio_name,group_name):
+    synthesised_audio_name = f"{audio_name}.wav"
+    path_to_place_synthesised_audio = f"{synthesised_dictation_storage}/{group_name}/{synthesised_audio_name}"
+
+    # acertain the existance of the file path directories
+    check_dir_existance_create(path_to_place_synthesised_audio)
+
+    #Load the downloaded voice from its location
     try:
-        voice = PiperVoice.load(voice_location) # Changed to .load_voice for clarity and consistency with newer API examples
+        voice = PiperVoice.load(voice_location)
     except Exception as e:
-        print(f"Error loading Piper voice model from {voice_location}: {e}")
-        # Consider adding sys.exit(1) or raising the error further if this is critical
-        return # Exit the function if voice loading fails
+        print(f"Error loading Piper voice model from : {voice_location} : {e}")
+        return 
 
-    # The block below for loading PiperConfig is typically not necessary
-    # when you just want to use the default configuration provided with the .onnx model.
-    # PiperVoice.load_voice() handles this implicitly.
-    # It would only be used if you intend to modify configuration parameters dynamically,
-    # e.g., to adjust the speaking rate or noise scale at runtime, and then
-    # pass that *modified* config to synthesize_wav.
-    # For now, let's keep it minimal and rely on the automatic loading.
+    #customize the voice_synthesized
+    #with open(json_location,"r",encoding="utf-8") as config_file:
+    #    config_dict = json.load(config_file)
+    #    config = PiperConfig.from_dict(config_dict)
 
-    # If you needed to modify config dynamically (e.g., adjust speaking speed):
-    # try:
-    #     with open(json_location,"r",encoding="utf-8") as config_file:
-    #         config_dict = json.load(config_file)
-    #     config = PiperConfig.from_dict(config_dict)
-    #     config.speaker.noise_scale = 0.6 # Example modification
-    # except Exception as e:
-    #     print(f"Error loading or parsing Piper config JSON: {e}")
-    #     return
-    # # Then pass `syn_config=config` to synthesize_wav
 
-    output_filename = "audiobook.wav" # Consistent filename
+    # Write the synthesized text to audio
     try:
-        with wave.open(output_filename, "wb") as wavefile:
-            # For most cases, you don't need syn_config=config here if you're
-            # using the default config loaded with the voice.
-            # If you *did* load/modify a config, you'd pass it here.
-            # However, the simpler .synthesize_wav(text, wavefile) is often enough.
-            voice.synthesize_wav(text, wavefile) # Removed syn_config=config for simplicity
-        print(f"Speech synthesized and saved to {output_filename}")
+        with wave.open(path_to_place_synthesised_audio,"wb") as wavefile:
+            voice.synthesize_wav(text, wavefile) #syn_config=config
+            print("Speech synthesised")
     except Exception as e:
-        print(f"Error synthesizing speech or writing to WAV file: {e}")
+        print(f"Error synthesising speech or writing to WAV file: {e}")
 
 
-# Main execution block
-if __name__ == "__main__":
-    voice_synthesis(converted_text)
+
+
+# Main function orchestrating everything
+def main():
+
+    # various inputs for customized synthesised voice
+    file_type = input("Input Propensity , Type 1 for pdf file OR Type 2 for text file OR 3 to type your text: ")
+    audio_name = input("What should this created audio file be called? ")
+    group_placement = input("Which group in the voice dictation directory should this be placed ?")
+    #voice_speed = input("What speed would you like cori to have less is more: ")
+
+    try:
+
+
+        #PDF file to speech
+        if int(file_type) == 1:
+
+            file = input("File path continue from this /home/ethenian/: ")
+            text_extracted = pdf_convertion_to_text(file)
+            voice_synthesis(text_extracted,audio_name,group_placement)
+
+
+        #Text file to speech
+        if int(file_type) == 2:
+
+            file = input("File path continue from this /home/ethenian/: ")
+            path_to_text_file = f"/home/ethenian/{file}"
+
+            # Write the synthesized text to audio
+            try:
+
+                with open(path_to_text_file, "r" ,encoding='utf-8') as file_txt:
+                    text_content = file_txt.read()
+                    voice_synthesis(text_content,audio_name,group_placement)
+
+            except Exception as e:
+                print(f"This went wrong with opening text_file: {e}")
+                
+
+        #Typed text to speech
+        if int(file_type) == 3:
+            typed_text = input("Type the text you want cori to voice synthesize: ")
+            voice_synthesis(typed_text,audio_name,group_placement)
+
+
+    except Exception as e:
+        print(f"Error in main component : {e}")
+
+
+main()
+
