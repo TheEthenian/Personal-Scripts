@@ -9,7 +9,7 @@ from PyPDF2 import PdfReader
 # file directories listing
 voice_location = "/home/ethenian/piper_voices/british-cori-high/en_GB-cori-high.onnx"
 json_location = "/home/ethenian/piper_voices/british-cori-high/en_GB-cori-high.onnx.json"
-synthesised_dictation_storage = "/home/ethenian/voiced_pdf_text_audiobooks"
+synthesised_dictation_storage = "/home/ethenian/Synthesised_voice_pdf_text_audiofiles"
 
 
 # check if directories in path_to place_synthesised_audio exists if not make it
@@ -18,9 +18,9 @@ def check_dir_existance_create(path_to_file):
     
     if directory_path:
         os.makedirs(directory_path, exist_ok=True)
-        print(f"Made new directory {directory_path} exists")
+        print(f"Made sure {directory_path} exists")
     else:
-        print(f"Directory {directory_path} already exists and we'll use that")
+        print("Nothing to see here")
 
 
 # converts pdf to text and has various customs such as starting page, ending page for selective text output
@@ -39,7 +39,7 @@ def pdf_convertion_to_text(file_path):
         accumulated_converted_pdf_text += page.extract_text()
         current_page += 1
     
-    print(f"Finished conversion of [ {file_path} ] to text")
+    print(f"Finished conversion of {file_path} to text")
     return accumulated_converted_pdf_text 
 
 
@@ -122,5 +122,8 @@ def main():
         print(f"Error in main component : {e}")
 
 
-main()
+
+
+if __name__ == "__main__":
+    main()
 

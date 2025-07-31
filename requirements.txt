@@ -5,4 +5,16 @@ git
 tmux
 wmctrl
 xdotool
+xclip
+rclone
+tqdm
+
+
+
+
+
+
+
+
+
 
